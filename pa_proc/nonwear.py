@@ -5,11 +5,6 @@ Created on Tue Aug 22 12:52:25 2023
 @author: Joren B.
 """
 
-##    	IMPORT PACKAGES
-import numpy as np
-import logging
-###
- 
 def choi_2011_calculate_non_wear_time(data, time, axis_nr, activity_threshold = 0, min_period_len = 90, spike_tolerance = 2,  min_window_len = 30, window_spike_tolerance = 0,  use_vector_magnitude = False, print_output = False):
     
     # axis_nr added to allow for choosing which axis should be used for calculation

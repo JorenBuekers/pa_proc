@@ -50,16 +50,6 @@ Created on Tue Aug 22 11:53:57 2023
 # data_act.to_csv("C:/my_path/expoapp_data_act.csv",index=False, header=False)
 
 
-#########################
-### Required imports  ###
-#########################
-
-
-import pandas as pd
-import numpy as np
-
-
-
 def expoapp_to_actigraph(path, gap_size, time_zone):
     
     # Read raw data
