@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Aug 22 12:49:22 2023
-
-@author: Joren B., mllopis
-"""
-
 ###############################################
 ###                                         ###
 ###   Acceleration data to counts and ENMO  ###
@@ -32,40 +25,46 @@ Created on Tue Aug 22 12:49:22 2023
 ### Required imports  ###
 #########################
  
+import pandas as pd
+import numpy as np
+import datetime
+from agcounts.extract import get_counts
+import skdh
 
 
-def acc_to_counts_enmo(path, device, sampling_freq, autocalibration):
+def acc_to_intermediate(path, device, sampling_freq, autocalibration):
+    from pa_proc.nonwear import weartime_choi2011
+    from pa_proc.nonwear import weartime_vanhees
 	
-    from functions.f_non_wear_bySyed import choi_2011_calculate_non_wear_time
-    from functions.f_non_wear_bySyed import hees_2013_calculate_non_wear_time
-	
-    # Extract datetime information from the Actigraph-like file
-    header = pd.read_csv(path, nrows=10, header=None)
-    start_date = header.iloc[3,0][-10:].strip()
-    start_second = np.int32(header.iloc[2,0][-2:].strip())
-    start_minute = np.int32(header.iloc[2,0][-5:-3].strip())
-    start_time = header.iloc[2,0][-8:-5].strip() + "{:02d}".format(start_minute) + ':00' # start at first rounded minute
-    start_datetime = (datetime.datetime.strptime(start_date + ' ' + start_time, '%d/%m/%Y %H:%M:%S').
-                      strftime('%Y-%m-%d %H:%M:%S'))
-    samples_to_skip_until_first_rounded_minute = (60-start_second)*30
-	
+
     # Read raw data (slightly different for Actigraph and ExpoApp)
     if device == 'actigraph':
+
+        # Extract datetime information from the Actigraph-like file
+        header = pd.read_csv(path, nrows=10, header=None)
+        start_date = header.iloc[3,0][-10:].strip()
+        start_second = np.int32(header.iloc[2,0][-2:].strip())
+        start_minute = np.int32(header.iloc[2,0][-5:-3].strip())
+        start_time = header.iloc[2,0][-8:-5].strip() + "{:02d}".format(start_minute) + ':00' # start at first rounded minute
+        start_datetime = (datetime.datetime.strptime(start_date + ' ' + start_time, '%d/%m/%Y %H:%M:%S').
+                        strftime('%Y-%m-%d %H:%M:%S'))
+        samples_to_skip_until_first_rounded_minute = (60-start_second)*30
+
         timeseries = pd.read_csv(path,  sep = ' ',
                              skiprows= 11 + samples_to_skip_until_first_rounded_minute, 
                              names=['xyz']) # Specify the separator so everything will be loaded into 1 column. ADAPT TO STUDY (e.g. actilife uses dots as separators).
         timeseries = timeseries['xyz'].str.split(',', expand=True)
-        timeseries = timeseries.rename(columns={0: "h", 1: "v", 2: "p"}) #The axis order is horizontal, vertical and perpendicular
+        timeseries = timeseries.rename(columns={0: "ml", 1: "v", 2: "ap"}) #The axis order is horizontal, vertical and perpendicular
         timeseries = timeseries.astype(float)
     elif device == 'expoapp':
         timeseries = pd.read_csv(path, 
                              skiprows= 11 + samples_to_skip_until_first_rounded_minute, 
-                             names=['v', 'h', 'p'])     #The axis order is vertical, horizontal and perpendicular  
+                             names=['v', 'ml', 'ap']) #The axis order is vertical, horizontal and perpendicular  
     
     
     # Calculate counts for the different axes and combine
-    counts = get_counts(np.array(timeseries[['v', 'h', 'p']]), freq=sampling_freq, epoch=60)
-    counts = pd.DataFrame(counts, columns=["Axis1", "Axis2", "Axis3"])  #The axis correspond to 1=vertical, 2=horizontal and 3=perpendicular
+    counts = get_counts(np.array(timeseries[['v', 'ml', 'ap']]), freq=sampling_freq, epoch=60)
+    counts = pd.DataFrame(counts, columns=['v', 'ml', 'ap'])  #The axis correspond to 1=vertical, 2=horizontal and 3=perpendicular
     counts['counts_vm'] = np.sqrt(counts.Axis1 **2 + counts.Axis2 **2 + counts.Axis3 **2)
     counts.index = np.datetime64(start_datetime) + np.arange(0,len(counts.index)*60,60)
     
@@ -75,12 +74,12 @@ def acc_to_counts_enmo(path, device, sampling_freq, autocalibration):
         skdh_pipeline.add(skdh.preprocessing.CalibrateAccelerometer())
         calibrated_dict = skdh_pipeline.run(time=timeseries.index, accel= timeseries.values)
         timeseries = pd.DataFrame(calibrated_dict.get('CalibrateAccelerometer').get('accel'), 
-                                  columns=['h','v','p'])
+                                  columns=['ml','v','ap'])
  
         
 	# Sensor wear based on van Hees 2013
-    timeseries['wear_vanhees'] = hees_2013_calculate_non_wear_time(timeseries[['v', 'h', 'p']].to_numpy(), 
-                                                                   hz = sampling_freq)
+    timeseries['wear_vanhees'] = weartime_vanhees(timeseries[['v', 'ml', 'ap']].to_numpy(),
+                                                  hz = sampling_freq)
 
 
     # Calculate ENMO
@@ -93,29 +92,23 @@ def acc_to_counts_enmo(path, device, sampling_freq, autocalibration):
                            'wear_vanhees': timeseries['wear_vanhees'].groupby(timeseries.index // sampling_freq).min()}) 
     enmo_1s.index = np.datetime64(start_datetime) + np.arange(len(enmo_1s.index))
 
-
     # Final dataframes at 10s and 60s epochs (by summing counts and averaging ENMO)
     enmo_10s = enmo_1s.resample('10s').mean()
     enmo_10s.wear_vanhees = enmo_10s.wear_vanhees.apply(np.floor)
 
-
     enmo_60s = enmo_1s.resample('60s').mean()
     enmo_60s.wear_vanhees = enmo_60s.wear_vanhees.apply(np.floor)
 
-
     counts_enmo = pd.concat([counts,enmo_60s], axis=1)
-
 
     # Non-wear based on Choi 2011
     wear_data_choi = counts_enmo[['Axis1','Axis2','Axis3']].to_numpy()
     
     # Apply choi algorithm to all 3 axes of count data, to deal with weird performance of agcounts at some points
-    choi_x = choi_2011_calculate_non_wear_time(wear_data_choi, counts_enmo.index, 0)
-    choi_y = choi_2011_calculate_non_wear_time(wear_data_choi, counts_enmo.index, 1)
-    choi_z = choi_2011_calculate_non_wear_time(wear_data_choi, counts_enmo.index, 2)
+    choi_x = weartime_choi2011(wear_data_choi, counts_enmo.index, 0)
+    choi_y = weartime_choi2011(wear_data_choi, counts_enmo.index, 1)
+    choi_z = weartime_choi2011(wear_data_choi, counts_enmo.index, 2)
     counts_enmo['wear_choi'] = np.floor((choi_x + choi_y + choi_z)/3)
     
     
     return enmo_10s, counts_enmo
-
-#last update: 24.10.15

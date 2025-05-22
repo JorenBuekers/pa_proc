@@ -4,8 +4,10 @@ Created on Tue Aug 22 12:52:25 2023
 
 @author: Joren B.
 """
+import pandas as pd
+import numpy as np
 
-def choi_2011_calculate_non_wear_time(data, time, axis_nr, activity_threshold = 0, min_period_len = 90, spike_tolerance = 2,  min_window_len = 30, window_spike_tolerance = 0,  use_vector_magnitude = False, print_output = False):
+def weartime_choi2011(data, time, axis_nr, activity_threshold = 0, min_period_len = 90, spike_tolerance = 2,  min_window_len = 30, window_spike_tolerance = 0,  use_vector_magnitude = False, print_output = False):
     
     # axis_nr added to allow for choosing which axis should be used for calculation
     
@@ -213,7 +215,7 @@ def choi_2011_calculate_non_wear_time(data, time, axis_nr, activity_threshold = 
 
 
 
-def hees_2013_calculate_non_wear_time(data, hz = 100, min_non_wear_time_window = 60, window_overlap = 15, std_mg_threshold = 3.0, std_min_num_axes = 2 , value_range_mg_threshold = 50.0, value_range_min_num_axes = 2):
+def weartime_vanhees(data, hz = 100, min_non_wear_time_window = 60, window_overlap = 15, std_mg_threshold = 3.0, std_min_num_axes = 2 , value_range_mg_threshold = 50.0, value_range_min_num_axes = 2):
 	"""
 	Estimation of non-wear time periods based on Hees 2013 paper
 	Estimation of Daily Energy Expenditure in Pregnant and Non-Pregnant Women Using a Wrist-Worn Tri-Axial Accelerometer
