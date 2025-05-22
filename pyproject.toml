@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pa_proc"
 version = "0.0.1"
-dependencies = ["panda", "numpy", "logging"]
+dependencies = ["panda", "numpy", "logging", "agcounts]
 requires-python = ">=3.11"
 authors = [
   {name = "Joren Buekers", email = "joren.buekers@isglobal.org"},
