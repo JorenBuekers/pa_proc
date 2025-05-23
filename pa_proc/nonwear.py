@@ -1,15 +1,15 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Aug 22 12:52:25 2023
-
-@author: Joren B.
-"""
 import pandas as pd
 import numpy as np
 
-def weartime_choi2011(data, time, axis_nr, activity_threshold = 0, min_period_len = 90, spike_tolerance = 2,  min_window_len = 30, window_spike_tolerance = 0,  use_vector_magnitude = False, print_output = False):
+from pa_proc.helper_functions import calculate_vector_magnitude
+
+def weartime_choi2011(data, time, 
+					  activity_threshold = 0, min_period_len = 90, 
+					  spike_tolerance = 2,  min_window_len = 30, window_spike_tolerance = 0,  
+					  use_vector_magnitude = False, axis_nr = np.nan, print_output = False):
     
-    # axis_nr added to allow for choosing which axis should be used for calculation
+    # Code adapted from: https://github.com/shaheen-syed/ActiGraph-ActiWave-Analysis
+	#  added to allow for choosing which axis should be used for calculation
     
 	"""	
 	Estimate non-wear time based on Choi 2011 paper:
@@ -35,6 +35,8 @@ def weartime_choi2011(data, time, axis_nr, activity_threshold = 0, min_period_le
 		minimum length of upstream or downstream time window (referred to as window2 in the paper) for consecutive zero counts required before and after the artifactual movement interval to be considered a nonwear time interval.
 	use_vector_magnitude: Boolean (optional)
 		if set to true, then use the vector magniturde of X,Y, and Z axis, otherwise, use X-axis only. Default False
+	axis_nr : int (optional)
+		if use_vector_magnitude is false, indicate index (0, 1 or 2) of which column represents the vertical axis
 	print_output : Boolean (optional)
 		if set to True, then print the output of the non wear sequence, start index, end index, duration, start time, end time and epoch values. Default is False
 	Returns
@@ -63,14 +65,12 @@ def weartime_choi2011(data, time, axis_nr, activity_threshold = 0, min_period_le
 		# calculate vectore
 		data = calculate_vector_magnitude(data, minus_one = False, round_negative_to_zero = False)
 	else:
-		# if not set to true, then use axis 1, which is the X-axis, located at index 0
+		# if not set to true, then use axis as specified by axis_nr
 		data = data[:,axis_nr]
-
 
 	"""
 		VARIABLES USED TO KEEP TRACK OF NON WEAR PERIODS
 	"""
-
 
 	# indicator for resetting and starting over
 	reset = False
@@ -89,19 +89,15 @@ def weartime_choi2011(data, time, axis_nr, activity_threshold = 0, min_period_le
 	# keep track of non wear sequences
 	ranges = []
 
-
 	"""
 		FIND NON WEAR PERIODS IN DATA
 	"""
 
-
 	# loop over the data
 	for paxn in range(0, len(data)):
 
-
 		# get the value
 		paxinten = data[paxn]
-
 
 		# reset counters if reset or stopped
 		if reset or stopped:	
@@ -114,7 +110,6 @@ def weartime_choi2011(data, time, axis_nr, activity_threshold = 0, min_period_le
 			window_2_invalid = False
 			cnt_non_zero = 0
 
-
 		# the non-wear period starts with a zero count
 		if paxinten == 0 and start == False:
 			
@@ -123,10 +118,8 @@ def weartime_choi2011(data, time, axis_nr, activity_threshold = 0, min_period_le
 			# set start boolean to true so we know that we started the period
 			start = True
 
-
 		# only do something when the non-wear period has started
 		if start:
-
 
 			# keep track of the number of minutes with intensity that is not a 'zero' count
 			if paxinten > activity_threshold:
@@ -134,50 +127,40 @@ def weartime_choi2011(data, time, axis_nr, activity_threshold = 0, min_period_le
 				# increase the spike counter
 				cnt_non_zero +=1
 
-
 			# when there is a non-zero count, check the upstream and downstream window for counts
 			# only when the upstream and downstream window have zero counts, then it is a valid non wear sequence
 			if paxinten > 0:
 
-
 				# check upstream window if there are counts, note that we skip the count right after the spike, since we allow for 2 minutes of spikes
 				upstream = data[paxn + spike_tolerance: paxn + min_window_len + 1]
-
 
 				# check if upstream has non zero counts, if so, then the window is invalid
 				if (upstream > 0).sum() > window_spike_tolerance:
 					window_2_invalid = True
 
-
 				# check downstream window if there are counts, again, we skip the count right before since we allow for 2 minutes of spikes
 				downstream = data[paxn - min_window_len if paxn - min_window_len > 0 else 0: paxn - 1]
-
 
 				# check if downstream has non zero counts, if so, then the window is invalid
 				if (downstream > 0).sum() > window_spike_tolerance:
 					window_2_invalid = True
 
-
 				# if the second window is invalid, we need to reset the sequence for the next run
 				if window_2_invalid:
 					reset = True
-
 
 			# reset counter if value is "zero" again
 			# if paxinten == 0:
 			# 	cnt_non_zero = 0
 
-
 			if paxinten <= activity_threshold:
 				cnt_non_zero = 0
-
 
 			# the sequence ends when there are 3 consecutive spikes, or an invalid second window (upstream or downstream), or the last value of the sequence	
 			if cnt_non_zero == 3 or window_2_invalid or paxn == len(data -1):
 				
 				# define the end of the period
 				end_nw = paxn
-
 
 				# check if the sequence is sufficient in length
 				if len(data[strt_nw:end_nw]) < min_period_len:
@@ -187,18 +170,14 @@ def weartime_choi2011(data, time, axis_nr, activity_threshold = 0, min_period_le
 					# length of sequence is sufficient, set stopped to True so we save the sequence start and end later on
 					stopped = True
 
-
 			# if stopped is True, the sequence stopped and is valid to include in the ranges
 			if stopped:
 				# add ranges start and end non wear time
 				ranges.append([strt_nw, end_nw])
 
 
-
-
 	# convert ranges into non-wear sequence vector
 	for row in ranges:
-
 
 		# if set to True, then print output to console/log
 		if print_output:
@@ -209,13 +188,13 @@ def weartime_choi2011(data, time, axis_nr, activity_threshold = 0, min_period_le
 		# set the non wear vector according to start and end
 		non_wear_vector[row[0]:row[1]] = 0			
 
-
 	return non_wear_vector
 
 
-
-
 def weartime_vanhees(data, hz = 100, min_non_wear_time_window = 60, window_overlap = 15, std_mg_threshold = 3.0, std_min_num_axes = 2 , value_range_mg_threshold = 50.0, value_range_min_num_axes = 2):
+	
+	# Code obtained from: https://github.com/shaheen-syed/ActiGraph-ActiWave-Analysis
+	
 	"""
 	Estimation of non-wear time periods based on Hees 2013 paper
 	Estimation of Daily Energy Expenditure in Pregnant and Non-Pregnant Women Using a Wrist-Worn Tri-Axial Accelerometer
@@ -252,73 +231,56 @@ def weartime_vanhees(data, hz = 100, min_non_wear_time_window = 60, window_overl
 		numpy array with non wear time encoded as 0, and wear time encoded as 1.
 	"""
 
-
 	# number of data samples in 1 minute
 	num_samples_per_min = hz * 60
-
 
 	# define the correct number of samples for the window and window overlap
 	min_non_wear_time_window *= num_samples_per_min
 	window_overlap *= num_samples_per_min
-
 
 	# convert the standard deviation threshold from mg to g
 	std_mg_threshold /= 1000
 	# convert the value range threshold from mg to g
 	value_range_mg_threshold /= 1000
 
-
 	# new array to record non-wear time. Convention is 0 = non-wear time, and 1 = wear time. Since we create a new array filled with ones, we only have to 
 	# deal with non-wear time (0), since everything else is already encoded as wear-time (1)
 	non_wear_vector = np.ones((data.shape[0], 1), dtype = 'uint8')
 
-
 	# loop over the data, start from the beginning with a step size of window overlap
 	for i in range(0, len(data), window_overlap):
-
 
 		# define the start of the sequence
 		start = i
 		# define the end of the sequence
 		end = i + min_non_wear_time_window
 
-
 		# slice the data from start to end
 		subset_data = data[start:end]
-
 
 		# check if the data sequence has been exhausted, meaning that there are no full windows left in the data sequence (this happens at the end of the sequence)
 		# comment out if you want to use all the data
 		if len(subset_data) < min_non_wear_time_window:
 			break
 
-
 		# calculate the standard deviation of each column (YXZ)
 		std = np.std(subset_data, axis=0)
 
-
 		# check if the standard deviation is below the threshold, and if the number of axes the standard deviation is below equals the std_min_num_axes threshold
 		if (std < std_mg_threshold).sum() >= std_min_num_axes:
-
 
 			# at least 'std_min_num_axes' are below the standard deviation threshold of 'std_min_num_axes', now set this subset of the data to 0 which will 
 			# record it as non-wear time. Note that the full 'new_wear_vector' is pre-populated with all ones, so we only have to set the non-wear time to zero
 			non_wear_vector[start:end] = 0
 
-
 		# calculate the value range (difference between the min and max) (here the point-to-point numpy method is used) for each column
 		value_range = np.ptp(subset_data, axis = 0)
 
-
 		# check if the value range, for at least 'value_range_min_num_axes' (e.g. 2) out of three axes, was less than 'value_range_mg_threshold' (e.g. 50) mg
 		if (value_range < value_range_mg_threshold).sum() >= value_range_min_num_axes:
-
 
 			# set the non wear vector to non-wear time for the start to end slice of the data
 			# Note that the full array starts with all ones, we only have to set the non-wear time to zero
 			non_wear_vector[start:end] = 0
 
-
 	return non_wear_vector
-
-
