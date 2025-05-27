@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pa_proc"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = ["panda", "numpy", "logging", "agcounts","skdh"]
 requires-python = ">=3.11"
 authors = [
