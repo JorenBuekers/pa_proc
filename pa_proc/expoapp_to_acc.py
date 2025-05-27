@@ -2,37 +2,39 @@ import pandas as pd
 import numpy as np
 
 def expoapp_to_equidistant(path, gap_size, time_zone):
-
+    """
     ##########################
     ### Function arguments ###
     ##########################
 
-    # path (string): path to raw ExpoApp data, acceleration in m/s2 (unequal sampling time, more or less 30 samples/sec)
-    # gap_size (int): maximal duration of a gap in the data that should be interpolated, in seconds
+    path: string
+        path to raw ExpoApp data, acceleration in m/s2 (unequal sampling time, more or less 30 samples/sec)
+    gap_size: int (optional, default = 1)
+        maximal duration of a gap in the data that should be interpolated, in seconds
+    time_zone: string (optional, default = "Europe/Madrid"))
+        local time zone
 
     ##############
     ### Output ###
     ##############
 
-    # data_acceleration (pandas dataframe): acceleration at 30 Hz in 3 axes:
-    # - v = vertical (x axis of of the phone)
-    # - ml = medio-lateral (y axis of of the phone)
-    # - ap = anterior-posterior (z axis of of the phone)
+    data_acceleration: pandas dataframe
+        acceleration at 30 Hz in 3 axes:
+            - v = vertical (x axis of of the phone)
+            - ml = medio-lateral (y axis of of the phone)
+            - ap = anterior-posterior (z axis of of the phone)
 
     #############################################
     ### Example of first rows of ExpoApp data ###
     #############################################
 
-    # timestamp;x;y;z (it also works if this row is not omitted)
-    # 1638259260008;-7.3071036;-2.3175871;6.2632318
-    # 1638259260027;-7.335834;-2.327164;6.244078
-    # 1638259260048;-7.3166804;-2.27928;6.1866174
-    # 1638259260069;-7.374141;-2.3750482;6.2728086
-    # 1638259260088;-7.3645644;-2.384625;6.291962
-  
-    ################
-    ### Function ###
-    ################
+    timestamp;x;y;z (it also works if this row is not omitted)
+    1638259260008;-7.3071036;-2.3175871;6.2632318
+    1638259260027;-7.335834;-2.327164;6.244078
+    1638259260048;-7.3166804;-2.27928;6.1866174
+    1638259260069;-7.374141;-2.3750482;6.2728086
+    1638259260088;-7.3645644;-2.384625;6.291962 
+    """
 
     # Read raw data
     try:
@@ -73,6 +75,7 @@ def expoapp_to_equidistant(path, gap_size, time_zone):
     data_acceleration = data_acceleration.iloc[mask_30hz,:]
     data_acceleration = data_acceleration.round(3)
     
+    # Update column names and add header
     data_acceleration.columns = "v","ml","ap"
     header = ["Start Time " + data_acceleration.index[0].strftime('%H:%M:%S'),
               "Start Date " + data_acceleration.index[0].strftime('%d/%m/%Y')]
@@ -84,37 +87,39 @@ def expoapp_to_equidistant(path, gap_size, time_zone):
     return data_acceleration
 
 def expoapp_to_actigraph(path, gap_size, time_zone):
-
+    """
     ##########################
     ### Function arguments ###
     ##########################
 
-    # path (string): path to raw ExpoApp data, acceleration in m/s2 (unequal sampling time, more or less 30 samples/sec)
-    # gap_size (int): maximal duration of a gap in the data that should be interpolated, in seconds
+    path: string
+        path to raw ExpoApp data, acceleration in m/s2 (unequal sampling time, more or less 30 samples/sec)
+    gap_size: int (optional, default = 1)
+        maximal duration of a gap in the data that should be interpolated, in seconds
+    time_zone: string (optional, default = "Europe/Madrid"))
+        local time zone
 
     ##############
     ### Output ###
     ##############
 
-    # data_actigraph (pandas dataframe): acceleration at 30 Hz in 3 axes:
-    # - v = vertical (x axis of of the phone)
-    # - ml = medio-lateral (y axis of of the phone)
-    # - ap = anterior-posterior (z axis of of the phone)
+    data_actigraph: pandas dataframe
+        acceleration at 30 Hz in 3 axes:
+            - v = vertical (x axis of of the phone)
+            - ml = medio-lateral (y axis of of the phone)
+            - ap = anterior-posterior (z axis of of the phone)
     
     #############################################
     ### Example of first rows of ExpoApp data ###
     #############################################
 
-    # timestamp;x;y;z (it also works if this row is not omitted)
-    # 1638259260008;-7.3071036;-2.3175871;6.2632318
-    # 1638259260027;-7.335834;-2.327164;6.244078
-    # 1638259260048;-7.3166804;-2.27928;6.1866174
-    # 1638259260069;-7.374141;-2.3750482;6.2728086
-    # 1638259260088;-7.3645644;-2.384625;6.291962
-
-    ################
-    ### Function ###
-    ################
+    timestamp;x;y;z (it also works if this row is not omitted)
+    1638259260008;-7.3071036;-2.3175871;6.2632318
+    1638259260027;-7.335834;-2.327164;6.244078
+    1638259260048;-7.3166804;-2.27928;6.1866174
+    1638259260069;-7.374141;-2.3750482;6.2728086
+    1638259260088;-7.3645644;-2.384625;6.291962
+    """
 
     # Read raw data
     try:

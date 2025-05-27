@@ -5,23 +5,42 @@ from agcounts.extract import get_counts
 import skdh
 
 from pa_proc.nonwear import weartime_choi2011
-from pa_proc.nonwear import weartime_vanhees
+from pa_proc.nonwear import weartime_vanhees2013
 
 def acc_to_intermediate(path, device, sampling_freq, autocalibration, location):
-
+    """
     ##########################
     ### Function arguments ###
     ##########################
     
-    # path (string): path to acceleration data in Actigraph-like style, in g
-    # device (string): indicate which device was used to collect the data: 'actigraph' or 'expoapp' # TOADAPT
-    # sampling_freq (int): sampling frequency of input dataframe, in hz
-    # autocalibration (0 or 1): if 1, autocalibration will be performed based on Van Hees et al., 2013 for the ENMO pathway
-    # location: #TOADAPT
-    
-    ################
-    ### Function ###
-    ################
+    path: string
+        path to acceleration data in 3 axes, in g
+    device: string (expoapp-csv, actigraph-csv, actigraph-gt3x, axivity-cwa or matrix-csv)
+        indicate which device was used to collect the data, and in which format the file was stored
+    sampling_freq: int
+        sampling frequency of input dataframe, in Hz
+    autocalibration: 0 or 1
+        if 1, autocalibration will be performed for the ENMO pathway, based on Van Hees et al., 2013 
+    location: string (lumbar, hip or wrist)
+        location where the device was worn
+
+    ##############
+    ### Output ###
+    ##############
+
+    intermediate_60s: pandas dataframe (1 value per minute)
+        - counts_v: Actigraph counts for the vertical axis
+        - counts_ml: Actigraph counts for the mediolateral axis
+        - counts_ap: Actigraph counts for the anterioposterior axis
+        - counts_vm: Actigraph counts for the vector magnitude of the three axis
+        - wear_choi: The device was worn (1) or not worn (0), based on the algorithm of Choi et al., 2011 (implementation from Syed et al., 2020)
+        - enmo: Eucledian Norm Minues One values
+        - wear_vanhees: The device was worn (1) or not worn (0), based on the algorithm of Van Hees et al., 2013 (implementation from Syed et al., 2020)
+
+    enmo_10s: pandas dataframe (1 value per 10 seconds)
+        - enmo: Eucledian Norm Minues One values
+        - wear_vanhees: The device was worn (1) or not worn (0), based on the algorithm of Van Hees et al., 2013 (implementation from Syed et al., 2020)
+    """
 
     if device == 'expoapp-csv':
 
@@ -40,8 +59,9 @@ def acc_to_intermediate(path, device, sampling_freq, autocalibration, location):
         # Load acceleration time series 
         timeseries = pd.read_csv(path, 
                                  skiprows = 3 + loc_first_round_minute, # start at first rounded minute
-                                 names=['v', 'ml', 'ap']) #The axis order is vertical, mediolateral and anterioposterior
+                                 names=['v', 'ml', 'ap']) # The axis order is vertical, mediolateral and anterioposterior
     
+
     elif device == 'actigraph-csv':
 
         # Extract datetime information
@@ -167,7 +187,7 @@ def acc_to_intermediate(path, device, sampling_freq, autocalibration, location):
                                         columns=['v','ml','ap'])
          
 	# Sensor wear based on van Hees 2013
-    timeseries['wear_vanhees'] = weartime_vanhees(np.array(timeseries[['v', 'ml', 'ap']]),
+    timeseries['wear_vanhees'] = weartime_vanhees2013(np.array(timeseries[['v', 'ml', 'ap']]),
                                                   hz = sampling_freq).astype(int)
 
     # Calculate ENMO
@@ -186,9 +206,9 @@ def acc_to_intermediate(path, device, sampling_freq, autocalibration, location):
 
     enmo_60s = enmo_1s.resample('60s').mean()
     enmo_60s.wear_vanhees = enmo_60s.wear_vanhees.apply(np.floor)
-
     intermediate_60s = pd.concat([counts,enmo_60s], axis=1)
 
+    # If the device is worn on the wrist, change back naming of axes
     if location == "wrist":
         intermediate_60s = intermediate_60s.rename(columns={"counts_v": "counts_x", 
                                                             "counts_ml": "counts_y", 

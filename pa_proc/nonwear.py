@@ -3,6 +3,9 @@ import numpy as np
 import logging
 
 def calculate_vector_magnitude(data, minus_one = False, round_negative_to_zero = False, dtype = np.float32):
+
+	# Code obtained from: https://github.com/shaheen-syed/ActiGraph-ActiWave-Analysis
+
 	"""
 	Calculate vector magnitude of acceleration data
 	the vector magnitude of acceleration is calculated as the Euclidian Norm
@@ -243,7 +246,7 @@ def weartime_choi2011(data, time,
 	return non_wear_vector
 
 
-def weartime_vanhees(data, hz = 100, min_non_wear_time_window = 60, window_overlap = 15, std_mg_threshold = 3.0, std_min_num_axes = 2 , value_range_mg_threshold = 50.0, value_range_min_num_axes = 2):
+def weartime_vanhees2013(data, hz = 100, min_non_wear_time_window = 60, window_overlap = 15, std_mg_threshold = 3.0, std_min_num_axes = 2 , value_range_mg_threshold = 50.0, value_range_min_num_axes = 2):
 	
 	# Code obtained from: https://github.com/shaheen-syed/ActiGraph-ActiWave-Analysis
 	
