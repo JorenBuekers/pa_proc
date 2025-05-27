@@ -7,16 +7,17 @@ import skdh
 from pa_proc.nonwear import weartime_choi2011
 from pa_proc.nonwear import weartime_vanhees
 
-def acc_to_intermediate(path, device, sampling_freq, autocalibration):
+def acc_to_intermediate(path, device, sampling_freq, autocalibration, location):
 
     ##########################
     ### Function arguments ###
     ##########################
     
     # path (string): path to acceleration data in Actigraph-like style, in g
-    # device (string): indicate which device was used to collect the data: 'actigraph' or 'expoapp'
+    # device (string): indicate which device was used to collect the data: 'actigraph' or 'expoapp' # TOADAPT
     # sampling_freq (int): sampling frequency of input dataframe, in hz
     # autocalibration (0 or 1): if 1, autocalibration will be performed based on Van Hees et al., 2013 for the ENMO pathway
+    # location: #TOADAPT
     
     ################
     ### Function ###
@@ -114,7 +115,35 @@ def acc_to_intermediate(path, device, sampling_freq, autocalibration):
         timeseries = timeseries.rename(columns={"accel_x": "v", "accel_y": "ml", "accel_z": "ap"}) # The axis order is vertical, mediolateral and anterioposterior
         timeseries = timeseries[['v', 'ml', 'ap']] # Change order of axes and drop unnecesarry columns
 
-    
+    elif device == 'matrix-csv': 
+        
+        # Load acceleration time series
+        data_matrix = pd.read_csv(path, index_col='dateTime', usecols=['dateTime', 'acc_x', 'acc_y', 'acc_z'])
+        
+        # Make into an equidistant time series
+        data_matrix.index = pd.DatetimeIndex(data_matrix.index, tz = "Europe/Madrid")
+        if sampling_freq==100:
+            timeseries = data_matrix.resample("0.01s").ffill() 
+        else:
+            print("Code still needs to be added for when sampling frequency of the Matrix device is not 100 Hz")
+
+        # Identify location of first rounded minute (data of the incomplete minute before will be deleted)
+        first_round_minute = timeseries.loc[timeseries.index.minute==timeseries.index[0].minute+1].index[0]
+        loc_first_round_minute = timeseries.index.get_loc(first_round_minute)
+        loc_first_round_minute = 0 if loc_first_round_minute==sampling_freq*60 else loc_first_round_minute
+
+        # Remove data before first rounded minute
+        timeseries = timeseries[loc_first_round_minute:]
+
+        # Extract datetime information
+        start_datetime = timeseries.index[0]
+        start_second = start_datetime.second
+
+        # Adapt index and column names
+        timeseries.reset_index(inplace=True)
+        timeseries = timeseries.rename(columns={"acc_x": "v", "acc_y": "ml", "acc_z": "ap"}) # Rename for running the code, but reverse naming at the end of script
+        timeseries = timeseries[['v', 'ml', 'ap']] # Drop unnecesarry columns
+
     # Calculate counts for the different axes and combine
     counts = get_counts(np.array(timeseries), freq=sampling_freq, epoch=60)
     counts = pd.DataFrame(counts, columns=['counts_v', 'counts_ml', 'counts_ap'])  #The axis correspond to 1=vertical, 2=horizontal and 3=perpendicular
@@ -131,8 +160,11 @@ def acc_to_intermediate(path, device, sampling_freq, autocalibration):
         skdh_pipeline = skdh.Pipeline()
         skdh_pipeline.add(skdh.preprocessing.CalibrateAccelerometer())
         calibrated_dict = skdh_pipeline.run(time=timeseries.index, accel= timeseries.values)
-        timeseries = pd.DataFrame(calibrated_dict.get('CalibrateAccelerometer').get('accel'), 
-                                  columns=['v','ml','ap'])
+        
+        # Only if auto-calibration was performed, obtained calibrated values (otherwise calibrated_dict is empty)
+        if len(calibrated_dict.get('CalibrateAccelerometer')) != 0: 
+            timeseries = pd.DataFrame(calibrated_dict.get('CalibrateAccelerometer').get('accel'), 
+                                        columns=['v','ml','ap'])
          
 	# Sensor wear based on van Hees 2013
     timeseries['wear_vanhees'] = weartime_vanhees(np.array(timeseries[['v', 'ml', 'ap']]),
@@ -156,5 +188,10 @@ def acc_to_intermediate(path, device, sampling_freq, autocalibration):
     enmo_60s.wear_vanhees = enmo_60s.wear_vanhees.apply(np.floor)
 
     intermediate_60s = pd.concat([counts,enmo_60s], axis=1)
-    
+
+    if location == "wrist":
+        intermediate_60s = intermediate_60s.rename(columns={"counts_v": "counts_x", 
+                                                            "counts_ml": "counts_y", 
+                                                            "counts_ap": "counts_z"})
+   
     return intermediate_60s, enmo_10s
