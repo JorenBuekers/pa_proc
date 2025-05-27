@@ -1,10 +1,12 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools", "setuptools_scm"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
 
 [project]
 name = "pa_proc"
-version = "0.0.2"
+dynamic = ["version"]
 dependencies = ["panda", "numpy", "logging", "agcounts","skdh"]
 requires-python = ">=3.11"
 authors = [
