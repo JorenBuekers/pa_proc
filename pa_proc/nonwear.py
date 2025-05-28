@@ -34,21 +34,19 @@ def calculate_vector_magnitude(data, minus_one = False, round_negative_to_zero =
 	# change dtype of array to float32 (also to hold scaled data correctly). The original unscaled data is stored as int16, but when we want to calculate the vector we exceed the values that can be stored in 16 bit
 	data = data.astype(dtype = np.float32)
 
-	try:
+	# calculate the vector magnitude on the whole array
+	vector_magnitude = np.sqrt(np.sum(np.square(data), axis=1)).astype(dtype=dtype)
 
-		# calculate the vector magnitude on the whole array
-		vector_magnitude = np.sqrt(np.sum(np.square(data), axis=1)).astype(dtype=dtype)
+	# check if minus_one is set to True, if so, we need to calculate the ENMO
+	if minus_one:
+		vector_magnitude -= 1
 
-		# check if minus_one is set to True, if so, we need to calculate the ENMO
-		if minus_one:
-			vector_magnitude -= 1
+	# if set to True, round negative values to zero
+	if round_negative_to_zero:
+		vector_magnitude = vector_magnitude.clip(min=0)
 
-		# if set to True, round negative values to zero
-		if round_negative_to_zero:
-			vector_magnitude = vector_magnitude.clip(min=0)
-
-		# reshape the array into number of acceleration values, 1 column
-		return vector_magnitude.reshape(data.shape[0], 1)
+	# reshape the array into number of acceleration values, 1 column
+	return vector_magnitude.reshape(data.shape[0], 1)
 		
 def weartime_choi2011(data, time, 
 					  activity_threshold = 0, min_period_len = 90, 
