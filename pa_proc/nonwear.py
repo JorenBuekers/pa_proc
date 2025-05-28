@@ -1,4 +1,3 @@
-import pandas as pd
 import numpy as np
 
 def calculate_vector_magnitude(data, minus_one = False, round_negative_to_zero = False, dtype = np.float32):
