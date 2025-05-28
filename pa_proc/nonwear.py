@@ -1,10 +1,9 @@
 import pandas as pd
 import numpy as np
-import logging
 
 def calculate_vector_magnitude(data, minus_one = False, round_negative_to_zero = False, dtype = np.float32):
 
-	# Code obtained from: https://github.com/shaheen-syed/ActiGraph-ActiWave-Analysis
+	# Code adapted from: https://github.com/shaheen-syed/ActiGraph-ActiWave-Analysis
 
 	"""
 	Calculate vector magnitude of acceleration data
@@ -52,16 +51,10 @@ def calculate_vector_magnitude(data, minus_one = False, round_negative_to_zero =
 		# reshape the array into number of acceleration values, 1 column
 		return vector_magnitude.reshape(data.shape[0], 1)
 		
-
-	except Exception as e:
-		
-		logging.error('[{}] : {}'.format(sys._getframe().f_code.co_name,e))
-		exit(1)
-		
 def weartime_choi2011(data, time, 
 					  activity_threshold = 0, min_period_len = 90, 
 					  spike_tolerance = 2,  min_window_len = 30, window_spike_tolerance = 0,  
-					  use_vector_magnitude = False, axis_nr = np.nan, print_output = False):
+					  use_vector_magnitude = False, axis_nr = np.nan):
     
     # Code adapted from: https://github.com/shaheen-syed/ActiGraph-ActiWave-Analysis
 	#  added to allow for choosing which axis should be used for calculation
@@ -92,8 +85,6 @@ def weartime_choi2011(data, time,
 		if set to true, then use the vector magniturde of X,Y, and Z axis, otherwise, use X-axis only. Default False
 	axis_nr : int (optional)
 		if use_vector_magnitude is false, indicate index (0, 1 or 2) of which column represents the vertical axis
-	print_output : Boolean (optional)
-		if set to True, then print the output of the non wear sequence, start index, end index, duration, start time, end time and epoch values. Default is False
 	Returns
 	---------
 	non_wear_vector : np.array((n_samples, 1))
@@ -103,7 +94,7 @@ def weartime_choi2011(data, time,
 
 	# check if data contains at least min_period_len of data
 	if len(data) < min_period_len:
-		logging.error('Epoch data contains {} samples, which is less than the {} minimum required samples'.format(len(data), min_period_len))
+		print('Epoch data contains {} samples, which is less than the {} minimum required samples'.format(len(data), min_period_len))
 
 
 	# create non wear vector as numpy array with ones. now we only need to add the zeros which are the non-wear time segments
@@ -233,12 +224,6 @@ def weartime_choi2011(data, time,
 
 	# convert ranges into non-wear sequence vector
 	for row in ranges:
-
-		# if set to True, then print output to console/log
-		if print_output:
-			logging.debug('start index: {}, end index: {}, duration : {}'.format(row[0], row[1], row[1] - row[0]))
-			logging.debug('start time: {}, end time: {}'.format(time[row[0]], time[row[1]]))
-			logging.debug('Epoch values \n{}'.format(data[row[0]:row[1]].T))
 		
 		# set the non wear vector according to start and end
 		non_wear_vector[row[0]:row[1]] = 0			
@@ -248,7 +233,7 @@ def weartime_choi2011(data, time,
 
 def weartime_vanhees2013(data, hz = 100, min_non_wear_time_window = 60, window_overlap = 15, std_mg_threshold = 3.0, std_min_num_axes = 2 , value_range_mg_threshold = 50.0, value_range_min_num_axes = 2):
 	
-	# Code obtained from: https://github.com/shaheen-syed/ActiGraph-ActiWave-Analysis
+	# Code adapted from: https://github.com/shaheen-syed/ActiGraph-ActiWave-Analysis
 	
 	"""
 	Estimation of non-wear time periods based on Hees 2013 paper
