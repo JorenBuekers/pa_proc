@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pa_proc"
 dynamic = ["version"]
-dependencies = ["pandas", "numpy", "agcounts", "scikit-digital-health"]
+dependencies = ["pandas", "numpy", "agcounts", "scikit-digital-health", "pygt3x","openmovement"]
 requires-python = ">=3.11"
 authors = [
   {name = "Joren Buekers", email = "joren.buekers@isglobal.org"},
